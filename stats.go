@@ -77,14 +77,18 @@ func LoadStats(dataDir string) map[VocabularyPair]SuccessStats {
 	return stats
 }
 
+// Return a random word from stats based on provided statistics
+// The more successful the user is with a word the less likely it is to occur
 func NextWord(stats map[VocabularyPair]SuccessStats) VocabularyPair {
-	indexToPair := make([]VocabularyPair, len(stats))
-	cutOffs := make([]int, len(stats))
+	N := len(stats)
+	indexToPair := make([]VocabularyPair, N)
+	cutOffs := make([]int, N)
 	total := 0
 
 	i := 0
 	for pair, stat := range stats {
-		w := int(-9*stat.SuccessRate() + 10)
+		// TODO: These should not be constants, as with more words we are getting the les likely it i
+		w := int(-99*stat.SuccessRate() + 100)
 		cutOffs[i] = total + w
 		total += w
 		indexToPair[i] = pair
@@ -92,7 +96,7 @@ func NextWord(stats map[VocabularyPair]SuccessStats) VocabularyPair {
 	}
 
 	r := rand.Intn(total)
-	indx := rand.Intn(len(stats))
+	indx := rand.Intn(N)
 	for i, cutOff := range cutOffs {
 		if r < cutOff {
 			indx = i
