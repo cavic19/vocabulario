@@ -86,7 +86,7 @@ func (stats WordStats) NextWord() VocabularyPair {
 	}
 
 	r := rand.Intn(total)
-	indx := rand.Intn(N)
+	indx := rand.Intn(len(indexToPair))
 	for i, cutOff := range cutOffs {
 		if r < cutOff {
 			indx = i
