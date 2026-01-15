@@ -9,27 +9,27 @@ import (
 	"strings"
 )
 
-type SuccessStats struct {
+type WordRecord struct {
 	Success int
 	Failure int
 }
 
-func (ss SuccessStats) IncrSuccess() SuccessStats {
-	return SuccessStats{
+func (ss WordRecord) IncrSuccess() WordRecord {
+	return WordRecord{
 		ss.Success + 1,
 		ss.Failure,
 	}
 }
 
-func (ss SuccessStats) IncrFailure() SuccessStats {
-	return SuccessStats{
+func (ss WordRecord) IncrFailure() WordRecord {
+	return WordRecord{
 		ss.Success,
 		ss.Failure + 1,
 	}
 }
 
-// Return number between 0 and 1
-func (s SuccessStats) SuccessRate() float32 {
+// Returns a number between 0 and 1
+func (s WordRecord) SuccessRate() float32 {
 	total := s.Success + s.Failure
 	if total == 0 {
 		return 0
@@ -38,66 +38,11 @@ func (s SuccessStats) SuccessRate() float32 {
 	}
 }
 
-func SaveStats(stats map[VocabularyPair]SuccessStats, dataDir string) {
-	filePath := filepath.Join(dataDir, "stats.json")
-
-	serialized := make(map[string]SuccessStats)
-	for pair, stat := range stats {
-		if stat.Failure+stat.Success > 0 {
-			key := pair.From + "->" + pair.To
-			serialized[key] = stat
-		}
-	}
-
-	if len(serialized) == 0 {
-		return
-	}
-
-	data, err := json.MarshalIndent(serialized, "", "  ")
-	if err != nil {
-		log.Printf("Error marshalling stats: %v", err)
-		return
-	}
-
-	err = os.WriteFile(filePath, data, 0644)
-	if err != nil {
-		log.Printf("Error writing stats file: %v", err)
-		return
-	}
-}
-
-func LoadStats(dataDir string) map[VocabularyPair]SuccessStats {
-	filePath := filepath.Join(dataDir, "stats.json")
-
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		// File doesn't exist or can't be read, return empty map
-		return make(map[VocabularyPair]SuccessStats)
-	}
-
-	serialized := make(map[string]SuccessStats)
-	err = json.Unmarshal(data, &serialized)
-	if err != nil {
-		log.Printf("Error unmarshalling stats: %v", err)
-		return make(map[VocabularyPair]SuccessStats)
-	}
-
-	// Convert back to map
-	stats := make(map[VocabularyPair]SuccessStats)
-	for key, stat := range serialized {
-		parts := strings.Split(key, "->")
-		if len(parts) == 2 {
-			pair := VocabularyPair{From: parts[0], To: parts[1]}
-			stats[pair] = stat
-		}
-	}
-
-	return stats
-}
+type WordStats map[VocabularyPair]WordRecord
 
 // Return a random word from stats based on provided statistics
 // The more successful the user is with a word the less likely it is to occur
-func NextWord(stats map[VocabularyPair]SuccessStats) VocabularyPair {
+func (stats WordStats) NextWord() VocabularyPair {
 	N := len(stats)
 	indexToPair := make([]VocabularyPair, N)
 	cutOffs := make([]int, N)
@@ -122,4 +67,61 @@ func NextWord(stats map[VocabularyPair]SuccessStats) VocabularyPair {
 		}
 	}
 	return indexToPair[indx]
+}
+
+func SaveStats(stats WordStats, dataDir string) {
+	filePath := filepath.Join(dataDir, "stats.json")
+
+	serialized := make(map[string]WordRecord)
+	for pair, stat := range stats {
+		if stat.Failure+stat.Success > 0 {
+			key := pair.From + "->" + pair.To
+			serialized[key] = stat
+		}
+	}
+
+	if len(serialized) == 0 {
+		return
+	}
+
+	data, err := json.MarshalIndent(serialized, "", "  ")
+	if err != nil {
+		log.Printf("Error marshalling stats: %v", err)
+		return
+	}
+
+	err = os.WriteFile(filePath, data, 0644)
+	if err != nil {
+		log.Printf("Error writing stats file: %v", err)
+		return
+	}
+}
+
+func LoadStats(dataDir string) map[VocabularyPair]WordRecord {
+	filePath := filepath.Join(dataDir, "stats.json")
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		// File doesn't exist or can't be read, return empty map
+		return make(map[VocabularyPair]WordRecord)
+	}
+
+	serialized := make(map[string]WordRecord)
+	err = json.Unmarshal(data, &serialized)
+	if err != nil {
+		log.Printf("Error unmarshalling stats: %v", err)
+		return make(map[VocabularyPair]WordRecord)
+	}
+
+	// Convert back to map
+	stats := make(map[VocabularyPair]WordRecord)
+	for key, stat := range serialized {
+		parts := strings.Split(key, "->")
+		if len(parts) == 2 {
+			pair := VocabularyPair{From: parts[0], To: parts[1]}
+			stats[pair] = stat
+		}
+	}
+
+	return stats
 }

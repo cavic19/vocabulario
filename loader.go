@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func loadLessons(dataDir string, lessonName string) ([]Lesson, error) {
+func LoadLessons(dataDir string, lessonName string) ([]Lesson, error) {
 	var lessons []Lesson
 
 	entries, err := os.ReadDir(dataDir)

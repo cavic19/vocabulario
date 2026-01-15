@@ -43,7 +43,7 @@ func main() {
 	flag.StringVar(&lessonName, "lesson", "", "Specific lesson to load (optional, loads all if not specified)")
 	flag.Parse()
 
-	lessons, err := loadLessons(dataDir, lessonName)
+	lessons, err := LoadLessons(dataDir, lessonName)
 	if err != nil {
 		log.Fatalf("Error loading lessons: %v", err)
 	}
@@ -53,7 +53,7 @@ func main() {
 		return
 	}
 
-	var stats map[VocabularyPair]SuccessStats = make(map[VocabularyPair]SuccessStats)
+	var stats WordStats = make(map[VocabularyPair]WordRecord)
 	loadedStats := LoadStats(dataDir)
 	for _, lesson := range lessons {
 		for _, pair := range lesson.Pairs {
@@ -69,7 +69,7 @@ func main() {
 	for {
 		SaveStats(stats, dataDir)
 
-		word := NextWord(stats)
+		word := stats.NextWord()
 		fmt.Printf("%v: ", word.From)
 		input, _ := reader.ReadString('\n')
 		if Compare(word.To, input) {
