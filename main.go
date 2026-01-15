@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 	"unicode"
 
 	"golang.org/x/text/runes"
@@ -37,6 +39,8 @@ var transformer = transform.Chain(
 	norm.NFC,
 )
 
+const SnapshotInterval time.Duration = 10 * time.Second
+
 func main() {
 	var dataDir string
 	var lessonName string
@@ -55,31 +59,40 @@ func main() {
 		return
 	}
 
-	var words []VocabularyPair
-
+	var stats map[VocabularyPair]SuccessStats = make(map[VocabularyPair]SuccessStats)
+	loadedStats := LoadStats(dataDir)
 	for _, lesson := range lessons {
 		for _, pair := range lesson.Pairs {
-			words = append(words, VocabularyPair{pair.From, pair.To}, VocabularyPair{pair.To, pair.From})
+			pair1 := VocabularyPair{pair.From, pair.To}
+			pair2 := VocabularyPair{pair.To, pair.From}
+			// Remember, when there is no value for givne pair in the loaded map, it will use a default value which is basically all zeros
+			stats[pair1] = loadedStats[pair1]
+			stats[pair2] = loadedStats[pair2]
 		}
 	}
 	reader := bufio.NewReader(os.Stdin)
-	var stats []SuccessStats = make([]SuccessStats, len(words))
+
+	lastSave := time.Now()
 
 	for {
-		indx := NextIdx(stats)
-		word := words[indx]
+		if time.Since(lastSave) >= SnapshotInterval {
+			SaveStats(stats, dataDir)
 
+			lastSave = time.Now()
+		}
+
+		word := NextWord(stats)
 		fmt.Printf("%v: ", word.From)
 		input, _ := reader.ReadString('\n')
-		oldStats := stats[indx]
+		oldStats := stats[word]
 		if compare(word.To, input, ComparisonOptions{}) {
-			stats[indx] = SuccessStats{
+			stats[word] = SuccessStats{
 				oldStats.Success + 1,
 				oldStats.Failure,
 			}
 		} else {
 			fmt.Printf("Wrong! It should be %v\n", word.To)
-			stats[indx] = SuccessStats{
+			stats[word] = SuccessStats{
 				oldStats.Success,
 				oldStats.Failure + 1,
 			}
@@ -87,25 +100,82 @@ func main() {
 	}
 }
 
-// index -> to stat
-func NextIdx(statsByIdx []SuccessStats) int {
-	cutOffs := make([]int, len(statsByIdx))
+func SaveStats(stats map[VocabularyPair]SuccessStats, dataDir string) {
+	filePath := filepath.Join(dataDir, "stats.json")
+
+	serialized := make(map[string]SuccessStats)
+	for pair, stat := range stats {
+		if stat.Failure+stat.Success > 0 {
+			key := pair.From + "->" + pair.To
+			serialized[key] = stat
+		}
+	}
+
+	data, err := json.MarshalIndent(serialized, "", "  ")
+	if err != nil {
+		log.Printf("Error marshalling stats: %v", err)
+		return
+	}
+
+	err = os.WriteFile(filePath, data, 0644)
+	if err != nil {
+		log.Printf("Error writing stats file: %v", err)
+		return
+	}
+}
+
+func LoadStats(dataDir string) map[VocabularyPair]SuccessStats {
+	filePath := filepath.Join(dataDir, "stats.json")
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		// File doesn't exist or can't be read, return empty map
+		return make(map[VocabularyPair]SuccessStats)
+	}
+
+	serialized := make(map[string]SuccessStats)
+	err = json.Unmarshal(data, &serialized)
+	if err != nil {
+		log.Printf("Error unmarshalling stats: %v", err)
+		return make(map[VocabularyPair]SuccessStats)
+	}
+
+	// Convert back to map
+	stats := make(map[VocabularyPair]SuccessStats)
+	for key, stat := range serialized {
+		parts := strings.Split(key, "->")
+		if len(parts) == 2 {
+			pair := VocabularyPair{From: parts[0], To: parts[1]}
+			stats[pair] = stat
+		}
+	}
+
+	return stats
+}
+
+func NextWord(stats map[VocabularyPair]SuccessStats) VocabularyPair {
+	indexToPair := make([]VocabularyPair, len(stats))
+	cutOffs := make([]int, len(stats))
 	total := 0
-	for i, stat := range statsByIdx {
+
+	i := 0
+	for pair, stat := range stats {
 		w := int(-9*stat.SuccessRate() + 10)
 		cutOffs[i] = total + w
 		total += w
+		indexToPair[i] = pair
+		i++
 	}
 
 	r := rand.Intn(total)
-	indx := rand.Intn(len(statsByIdx))
+	indx := rand.Intn(len(stats))
 	for i, cutOff := range cutOffs {
 		if r < cutOff {
 			indx = i
 			break
 		}
 	}
-	return indx
+	return indexToPair[indx]
 }
 
 type ComparisonResult struct {
@@ -199,10 +269,3 @@ func (s SuccessStats) SuccessRate() float32 {
 		return float32(s.Success) / float32(total)
 	}
 }
-
-// // I don't want to repeat a word for say 3 steps?
-// // I want to success rate to dictate probability
-// // I want success rate to update as I keep guessing and occasionally I want to flush it to a file, flushing happens also on keybaord interrupt and such
-// func NextWord(words []VocabularyPair, rates map[string]SuccessRate) VocabularyPair {
-
-// }
