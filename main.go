@@ -53,15 +53,17 @@ func main() {
 		return
 	}
 
-	var stats *WordStats = EmptyWordStats()
-	loadedStats := LoadStats(dataDir)
+	var stats *WordStats = WordStatsFromFile(dataDir)
 	for _, lesson := range lessons {
 		for _, pair := range lesson.Pairs {
 			pair1 := VocabularyPair{pair.From, pair.To}
 			pair2 := VocabularyPair{pair.To, pair.From}
-			// Remember, when there is no value for givne pair in the loaded map, it will use a default value which is basically all zeros
-			stats.counts[pair1] = loadedStats[pair1]
-			stats.counts[pair2] = loadedStats[pair2]
+			if _, ok := stats.counts[pair1]; !ok {
+				stats.counts[pair1] = WordRecord{}
+			}
+			if _, ok := stats.counts[pair2]; !ok {
+				stats.counts[pair2] = WordRecord{}
+			}
 		}
 	}
 	reader := bufio.NewReader(os.Stdin)

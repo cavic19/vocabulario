@@ -43,10 +43,44 @@ type WordStats struct {
 	memory *Memory[VocabularyPair]
 }
 
+const MemorySize int = 54
+
 func EmptyWordStats() *WordStats {
 	return &WordStats{
 		make(map[VocabularyPair]WordRecord),
-		NewMemory[VocabularyPair](5),
+		NewMemory[VocabularyPair](MemorySize),
+	}
+}
+
+func WordStatsFromFile(dataDir string) *WordStats {
+	filePath := filepath.Join(dataDir, "stats.json")
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		// File doesn't exist or can't be read, return empty map
+		return EmptyWordStats()
+	}
+
+	serialized := make(map[string]WordRecord)
+	err = json.Unmarshal(data, &serialized)
+	if err != nil {
+		log.Printf("Error unmarshalling stats: %v", err)
+		return EmptyWordStats()
+	}
+
+	// Convert back to map
+	stats := make(map[VocabularyPair]WordRecord)
+	for key, stat := range serialized {
+		parts := strings.Split(key, "->")
+		if len(parts) == 2 {
+			pair := VocabularyPair{From: parts[0], To: parts[1]}
+			stats[pair] = stat
+		}
+	}
+
+	return &WordStats{
+		stats,
+		NewMemory[VocabularyPair](MemorySize),
 	}
 }
 
@@ -69,6 +103,7 @@ func (ws *WordStats) RecordSuccess(word VocabularyPair) {
 func (stats WordStats) NextWord() VocabularyPair {
 	N := len(stats.counts)
 	indexToPair := make([]VocabularyPair, N)
+	// Helper
 	cutOffs := make([]int, N)
 	total := 0
 
@@ -125,33 +160,4 @@ func SaveStats(stats *WordStats, dataDir string) {
 		log.Printf("Error writing stats file: %v", err)
 		return
 	}
-}
-
-func LoadStats(dataDir string) map[VocabularyPair]WordRecord {
-	filePath := filepath.Join(dataDir, "stats.json")
-
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		// File doesn't exist or can't be read, return empty map
-		return make(map[VocabularyPair]WordRecord)
-	}
-
-	serialized := make(map[string]WordRecord)
-	err = json.Unmarshal(data, &serialized)
-	if err != nil {
-		log.Printf("Error unmarshalling stats: %v", err)
-		return make(map[VocabularyPair]WordRecord)
-	}
-
-	// Convert back to map
-	stats := make(map[VocabularyPair]WordRecord)
-	for key, stat := range serialized {
-		parts := strings.Split(key, "->")
-		if len(parts) == 2 {
-			pair := VocabularyPair{From: parts[0], To: parts[1]}
-			stats[pair] = stat
-		}
-	}
-
-	return stats
 }
