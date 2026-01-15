@@ -14,6 +14,20 @@ type SuccessStats struct {
 	Failure int
 }
 
+func (ss SuccessStats) IncrSuccess() SuccessStats {
+	return SuccessStats{
+		ss.Success + 1,
+		ss.Failure,
+	}
+}
+
+func (ss SuccessStats) IncrFailure() SuccessStats {
+	return SuccessStats{
+		ss.Success,
+		ss.Failure + 1,
+	}
+}
+
 // Return number between 0 and 1
 func (s SuccessStats) SuccessRate() float32 {
 	total := s.Success + s.Failure
@@ -33,6 +47,10 @@ func SaveStats(stats map[VocabularyPair]SuccessStats, dataDir string) {
 			key := pair.From + "->" + pair.To
 			serialized[key] = stat
 		}
+	}
+
+	if len(serialized) == 0 {
+		return
 	}
 
 	data, err := json.MarshalIndent(serialized, "", "  ")

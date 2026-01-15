@@ -4,14 +4,14 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"golang.org/x/text/runes"
-	"golang.org/x/text/transform"
-	"golang.org/x/text/unicode/norm"
 	"log"
 	"os"
 	"strings"
-	"time"
 	"unicode"
+
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 type VocabularyPair struct {
@@ -34,8 +34,6 @@ var transformer = transform.Chain(
 	// Compose
 	norm.NFC,
 )
-
-const SnapshotInterval time.Duration = 10 * time.Second
 
 func main() {
 	var dataDir string
@@ -68,29 +66,17 @@ func main() {
 	}
 	reader := bufio.NewReader(os.Stdin)
 
-	lastSave := time.Now()
-
 	for {
-		if time.Since(lastSave) >= SnapshotInterval {
-			SaveStats(stats, dataDir)
-			lastSave = time.Now()
-		}
+		SaveStats(stats, dataDir)
 
 		word := NextWord(stats)
 		fmt.Printf("%v: ", word.From)
 		input, _ := reader.ReadString('\n')
-		oldStats := stats[word]
 		if Compare(word.To, input) {
-			stats[word] = SuccessStats{
-				oldStats.Success + 1,
-				oldStats.Failure,
-			}
+			stats[word] = stats[word].IncrSuccess()
 		} else {
 			fmt.Printf("Wrong! It should be %v\n", word.To)
-			stats[word] = SuccessStats{
-				oldStats.Success,
-				oldStats.Failure + 1,
-			}
+			stats[word] = stats[word].IncrFailure()
 		}
 	}
 }
