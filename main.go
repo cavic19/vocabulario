@@ -62,22 +62,50 @@ func main() {
 			words = append(words, VocabularyPair{pair.From, pair.To}, VocabularyPair{pair.To, pair.From})
 		}
 	}
-
 	reader := bufio.NewReader(os.Stdin)
+	var stats []SuccessStats = make([]SuccessStats, len(words))
 
-outer:
 	for {
-		word := words[rand.Intn(len(words))]
-		for {
-			fmt.Printf("%v: ", word.From)
-			input, _ := reader.ReadString('\n')
-			if compare(word.To, input, ComparisonOptions{}) {
-				continue outer
-			} else {
-				fmt.Printf("Wrong! It should be %v\n", word.To)
+		indx := NextIdx(stats)
+		word := words[indx]
+
+		fmt.Printf("%v: ", word.From)
+		input, _ := reader.ReadString('\n')
+		oldStats := stats[indx]
+		if compare(word.To, input, ComparisonOptions{}) {
+			stats[indx] = SuccessStats{
+				oldStats.Success + 1,
+				oldStats.Failure,
+			}
+		} else {
+			fmt.Printf("Wrong! It should be %v\n", word.To)
+			stats[indx] = SuccessStats{
+				oldStats.Success,
+				oldStats.Failure + 1,
 			}
 		}
 	}
+}
+
+// index -> to stat
+func NextIdx(statsByIdx []SuccessStats) int {
+	cutOffs := make([]int, len(statsByIdx))
+	total := 0
+	for i, stat := range statsByIdx {
+		w := int(-9*stat.SuccessRate() + 10)
+		cutOffs[i] = total + w
+		total += w
+	}
+
+	r := rand.Intn(total)
+	indx := rand.Intn(len(statsByIdx))
+	for i, cutOff := range cutOffs {
+		if r < cutOff {
+			indx = i
+			break
+		}
+	}
+	return indx
 }
 
 type ComparisonResult struct {
@@ -156,3 +184,25 @@ func loadLesson(filePath, fileName string) (Lesson, error) {
 
 	return lesson, nil
 }
+
+type SuccessStats struct {
+	Success int
+	Failure int
+}
+
+// Return number between 0 and 1
+func (s SuccessStats) SuccessRate() float32 {
+	total := s.Success + s.Failure
+	if total == 0 {
+		return 0
+	} else {
+		return float32(s.Success) / float32(total)
+	}
+}
+
+// // I don't want to repeat a word for say 3 steps?
+// // I want to success rate to dictate probability
+// // I want success rate to update as I keep guessing and occasionally I want to flush it to a file, flushing happens also on keybaord interrupt and such
+// func NextWord(words []VocabularyPair, rates map[string]SuccessRate) VocabularyPair {
+
+// }
