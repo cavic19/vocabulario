@@ -53,30 +53,29 @@ func main() {
 		return
 	}
 
-	var stats WordStats = make(map[VocabularyPair]WordRecord)
+	var stats *WordStats = EmptyWordStats()
 	loadedStats := LoadStats(dataDir)
 	for _, lesson := range lessons {
 		for _, pair := range lesson.Pairs {
 			pair1 := VocabularyPair{pair.From, pair.To}
 			pair2 := VocabularyPair{pair.To, pair.From}
 			// Remember, when there is no value for givne pair in the loaded map, it will use a default value which is basically all zeros
-			stats[pair1] = loadedStats[pair1]
-			stats[pair2] = loadedStats[pair2]
+			stats.counts[pair1] = loadedStats[pair1]
+			stats.counts[pair2] = loadedStats[pair2]
 		}
 	}
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
 		SaveStats(stats, dataDir)
-
 		word := stats.NextWord()
-		fmt.Printf("%v: ", word.From)
+		fmt.Printf("%v (%.2f): ", word.From, stats.GetStats(word).SuccessRate())
 		input, _ := reader.ReadString('\n')
 		if Compare(word.To, input) {
-			stats[word] = stats[word].IncrSuccess()
+			stats.RecordSuccess(word)
 		} else {
 			fmt.Printf("Wrong! It should be %v\n", word.To)
-			stats[word] = stats[word].IncrFailure()
+			stats.RecordFailure(word)
 		}
 	}
 }

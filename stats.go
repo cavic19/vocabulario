@@ -38,18 +38,45 @@ func (s WordRecord) SuccessRate() float32 {
 	}
 }
 
-type WordStats map[VocabularyPair]WordRecord
+type WordStats struct {
+	counts map[VocabularyPair]WordRecord
+	memory *Memory[VocabularyPair]
+}
+
+func EmptyWordStats() *WordStats {
+	return &WordStats{
+		make(map[VocabularyPair]WordRecord),
+		NewMemory[VocabularyPair](5),
+	}
+}
+
+func (ws *WordStats) GetStats(word VocabularyPair) WordRecord {
+	return ws.counts[word]
+}
+
+func (ws *WordStats) RecordFailure(word VocabularyPair) {
+	old := ws.counts[word]
+	ws.counts[word] = old.IncrFailure()
+}
+
+func (ws *WordStats) RecordSuccess(word VocabularyPair) {
+	old := ws.counts[word]
+	ws.counts[word] = old.IncrSuccess()
+}
 
 // Return a random word from stats based on provided statistics
 // The more successful the user is with a word the less likely it is to occur
 func (stats WordStats) NextWord() VocabularyPair {
-	N := len(stats)
+	N := len(stats.counts)
 	indexToPair := make([]VocabularyPair, N)
 	cutOffs := make([]int, N)
 	total := 0
 
 	i := 0
-	for pair, stat := range stats {
+	for pair, stat := range stats.counts {
+		if stats.memory.Has(pair) {
+			continue
+		}
 		// TODO: These should not be constants, as with more words we are getting the les likely it i
 		w := int(-99*stat.SuccessRate() + 100)
 		cutOffs[i] = total + w
@@ -66,14 +93,17 @@ func (stats WordStats) NextWord() VocabularyPair {
 			break
 		}
 	}
-	return indexToPair[indx]
+
+	nextWord := indexToPair[indx]
+	stats.memory.Push(nextWord)
+	return nextWord
 }
 
-func SaveStats(stats WordStats, dataDir string) {
+func SaveStats(stats *WordStats, dataDir string) {
 	filePath := filepath.Join(dataDir, "stats.json")
 
 	serialized := make(map[string]WordRecord)
-	for pair, stat := range stats {
+	for pair, stat := range stats.counts {
 		if stat.Failure+stat.Success > 0 {
 			key := pair.From + "->" + pair.To
 			serialized[key] = stat
