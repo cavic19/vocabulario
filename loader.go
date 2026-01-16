@@ -54,16 +54,12 @@ func loadLesson(filePath, fileName string) (Lesson, error) {
 		}
 
 		parts := strings.Split(line, ";")
-		if len(parts) > 1 {
-			from := parts[0]
-			// A single from word can have multiple to words
-			for _, to := range parts[1:] {
-				pair := VocabularyPair{
-					From: strings.TrimSpace(from),
-					To:   strings.TrimSpace(to),
-				}
-				lesson.Pairs = append(lesson.Pairs, pair)
+		if len(parts) == 2 {
+			pair := VocabularyPair{
+				From: strings.TrimSpace(parts[0]),
+				To:   strings.TrimSpace(parts[1]),
 			}
+			lesson.Pairs = append(lesson.Pairs, pair)
 		}
 	}
 

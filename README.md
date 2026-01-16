@@ -2,10 +2,7 @@
 A vocabulary learning app with spaced repetition. Words you struggle with appear more frequently.
 
 ## Setup
-1. Create a `data/` directory with CSV files (format: `foreign_word;translation1;translation2;...`)
-   - First column: the foreign language word you're learning
-   - Remaining columns: translations to your known language (semicolon-separated)
-   - A single word can have multiple translations (one per column)
+1. Create a `data/` directory with CSV files (format: `word1;word2`)
 2. Run: `go run . -dir data`
 3. Answer the prompts—the app tracks your progress and focuses on difficult words
 
