@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"iter"
 	"log"
+	"maps"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -58,18 +59,18 @@ func EmptyWordStats() *WordStats {
 }
 
 func InitWordStats(statsDir string, words iter.Seq[VocabularyPair]) *WordStats {
-	var stats *WordStats = WordStatsFromFile(statsDir)
+	actualStats := EmptyWordStats()
+	loadedStats := WordStatsFromFile(statsDir)
+
 	for pair := range words {
 		pair1 := VocabularyPair{pair.From, pair.To}
 		pair2 := VocabularyPair{pair.To, pair.From}
-		if _, ok := stats.counts[pair1]; !ok {
-			stats.counts[pair1] = WordRecord{}
-		}
-		if _, ok := stats.counts[pair2]; !ok {
-			stats.counts[pair2] = WordRecord{}
-		}
+
+		// If pair is not in loaded stats it will sue default value which is what we want
+		actualStats.counts[pair1] = loadedStats.counts[pair1]
+		actualStats.counts[pair2] = loadedStats.counts[pair2]
 	}
-	return stats
+	return actualStats
 }
 
 func (ws *WordStats) GetStats(word VocabularyPair) WordRecord {
@@ -100,8 +101,9 @@ func (stats WordStats) NextWord() VocabularyPair {
 		if stats.memory.Has(pair) {
 			continue
 		}
-		// TODO: These should not be constants, as with more words we are getting the les likely it i
-		w := int(-99*stat.SuccessRate() + 100)
+		// 100% success rate -> 1
+		// 0% success rate -> N
+		w := int(float32(1-N)*stat.SuccessRate() + float32(N))
 		cutOffs[i] = total + w
 		total += w
 		indexToPair[i] = pair
@@ -125,8 +127,13 @@ func (stats WordStats) NextWord() VocabularyPair {
 func SaveStats(stats *WordStats, dataDir string) {
 	filePath := filepath.Join(dataDir, "stats.json")
 
+	// We need to merge new stats into the saved stats, so we don't loose any
+	// There are betetr solutions to that, but for now this si fine
+	allStats := WordStatsFromFile(dataDir).counts
+	maps.Copy(allStats, stats.counts)
+
 	serialized := make(map[string]WordRecord)
-	for pair, stat := range stats.counts {
+	for pair, stat := range allStats {
 		if stat.Failure+stat.Success > 0 {
 			key := pair.From + "->" + pair.To
 			serialized[key] = stat
