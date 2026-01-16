@@ -54,7 +54,7 @@ func EmptyWordStats() *WordStats {
 }
 
 func InitWordStats(statsDir string, words iter.Seq[VocabularyPair]) *WordStats {
-	var stats *WordStats = wordStatsFromFile(statsDir)
+	var stats *WordStats = WordStatsFromFile(statsDir)
 	for pair := range words {
 		pair1 := VocabularyPair{pair.From, pair.To}
 		pair2 := VocabularyPair{pair.To, pair.From}
@@ -146,7 +146,7 @@ func SaveStats(stats *WordStats, dataDir string) {
 	}
 }
 
-func wordStatsFromFile(dataDir string) *WordStats {
+func WordStatsFromFile(dataDir string) *WordStats {
 	filePath := filepath.Join(dataDir, "stats.json")
 
 	data, err := os.ReadFile(filePath)
