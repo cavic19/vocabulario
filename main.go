@@ -53,26 +53,26 @@ func main() {
 		return
 	}
 
-	var stats *WordStats = WordStatsFromFile(dataDir)
-	for _, lesson := range lessons {
-		for _, pair := range lesson.Pairs {
-			pair1 := VocabularyPair{pair.From, pair.To}
-			pair2 := VocabularyPair{pair.To, pair.From}
-			if _, ok := stats.counts[pair1]; !ok {
-				stats.counts[pair1] = WordRecord{}
+	stats := InitWordStats(
+		dataDir,
+		func(yield func(VocabularyPair) bool) {
+			for _, lesson := range lessons {
+				for _, pair := range lesson.Pairs {
+					if !yield(pair) {
+						return
+					}
+				}
 			}
-			if _, ok := stats.counts[pair2]; !ok {
-				stats.counts[pair2] = WordRecord{}
-			}
-		}
-	}
-	reader := bufio.NewReader(os.Stdin)
+		},
+	)
+
+	inputReader := bufio.NewReader(os.Stdin)
 
 	for {
 		SaveStats(stats, dataDir)
 		word := stats.NextWord()
 		fmt.Printf("%v (%.2f): ", word.From, stats.GetStats(word).SuccessRate())
-		input, _ := reader.ReadString('\n')
+		input, _ := inputReader.ReadString('\n')
 		if Compare(word.To, input) {
 			stats.RecordSuccess(word)
 		} else {

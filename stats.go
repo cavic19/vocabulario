@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"iter"
 	"log"
 	"math/rand"
 	"os"
@@ -52,36 +53,19 @@ func EmptyWordStats() *WordStats {
 	}
 }
 
-func WordStatsFromFile(dataDir string) *WordStats {
-	filePath := filepath.Join(dataDir, "stats.json")
-
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		// File doesn't exist or can't be read, return empty map
-		return EmptyWordStats()
-	}
-
-	serialized := make(map[string]WordRecord)
-	err = json.Unmarshal(data, &serialized)
-	if err != nil {
-		log.Printf("Error unmarshalling stats: %v", err)
-		return EmptyWordStats()
-	}
-
-	// Convert back to map
-	stats := make(map[VocabularyPair]WordRecord)
-	for key, stat := range serialized {
-		parts := strings.Split(key, "->")
-		if len(parts) == 2 {
-			pair := VocabularyPair{From: parts[0], To: parts[1]}
-			stats[pair] = stat
+func InitWordStats(statsDir string, words iter.Seq[VocabularyPair]) *WordStats {
+	var stats *WordStats = wordStatsFromFile(statsDir)
+	for pair := range words {
+		pair1 := VocabularyPair{pair.From, pair.To}
+		pair2 := VocabularyPair{pair.To, pair.From}
+		if _, ok := stats.counts[pair1]; !ok {
+			stats.counts[pair1] = WordRecord{}
+		}
+		if _, ok := stats.counts[pair2]; !ok {
+			stats.counts[pair2] = WordRecord{}
 		}
 	}
-
-	return &WordStats{
-		stats,
-		NewMemory[VocabularyPair](MemorySize),
-	}
+	return stats
 }
 
 func (ws *WordStats) GetStats(word VocabularyPair) WordRecord {
@@ -159,5 +143,37 @@ func SaveStats(stats *WordStats, dataDir string) {
 	if err != nil {
 		log.Printf("Error writing stats file: %v", err)
 		return
+	}
+}
+
+func wordStatsFromFile(dataDir string) *WordStats {
+	filePath := filepath.Join(dataDir, "stats.json")
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		// File doesn't exist or can't be read, return empty map
+		return EmptyWordStats()
+	}
+
+	serialized := make(map[string]WordRecord)
+	err = json.Unmarshal(data, &serialized)
+	if err != nil {
+		log.Printf("Error unmarshalling stats: %v", err)
+		return EmptyWordStats()
+	}
+
+	// Convert back to map
+	stats := make(map[VocabularyPair]WordRecord)
+	for key, stat := range serialized {
+		parts := strings.Split(key, "->")
+		if len(parts) == 2 {
+			pair := VocabularyPair{From: parts[0], To: parts[1]}
+			stats[pair] = stat
+		}
+	}
+
+	return &WordStats{
+		stats,
+		NewMemory[VocabularyPair](MemorySize),
 	}
 }
