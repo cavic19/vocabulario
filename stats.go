@@ -15,6 +15,10 @@ type WordRecord struct {
 	Failure int
 }
 
+func (ss WordRecord) Total() int {
+	return ss.Success + ss.Failure
+}
+
 func (ss WordRecord) IncrSuccess() WordRecord {
 	return WordRecord{
 		ss.Success + 1,
@@ -31,7 +35,7 @@ func (ss WordRecord) IncrFailure() WordRecord {
 
 // Returns a number between 0 and 1
 func (s WordRecord) SuccessRate() float32 {
-	total := s.Success + s.Failure
+	total := s.Total()
 	if total == 0 {
 		return 0
 	} else {

@@ -113,14 +113,25 @@ func PrintStats(statsDir string) {
 		return
 	}
 
-	sort.Slice(kvs, func(i, j int) bool {
-		return kvs[i].Value.SuccessRate() > kvs[j].Value.SuccessRate()
+	sort.SliceStable(kvs, func(i, j int) bool {
+		iRate := kvs[i].Value.SuccessRate()
+		jRate := kvs[j].Value.SuccessRate()
+		iTotal := kvs[i].Value.Total()
+		jTotal := kvs[j].Value.Total()
+		if iRate == jRate {
+			if iTotal == jTotal {
+				return kvs[i].Key.From < kvs[j].Key.From
+			}
+			return iTotal > jTotal
+		}
+
+		return iRate > jRate
 	})
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintf(w, "From\tTo\tSuccess Rate\tTotal\n")
 	for _, record := range kvs {
-		fmt.Fprintf(w, "%v\t%v\t%.0f%%\t%v\n", record.Key.From, record.Key.To, record.Value.SuccessRate()*100.0, record.Value.Failure+record.Value.Success)
+		fmt.Fprintf(w, "%v\t%v\t%.0f%%\t%v\n", record.Key.From, record.Key.To, record.Value.SuccessRate()*100.0, record.Value.Total())
 	}
 	w.Flush()
 }
