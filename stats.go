@@ -49,7 +49,7 @@ type WordStats struct {
 	memory *Memory[VocabularyPair]
 }
 
-const MemorySize int = 54
+const MemorySize int = 5
 
 func EmptyWordStats() *WordStats {
 	return &WordStats{

@@ -54,7 +54,8 @@ func loadLesson(filePath, fileName string) (Lesson, error) {
 		}
 
 		parts := strings.Split(line, ";")
-		if len(parts) == 2 {
+		if len(parts) > 1 {
+			// Just ignore more values for now
 			pair := VocabularyPair{
 				From: strings.TrimSpace(parts[0]),
 				To:   strings.TrimSpace(parts[1]),
