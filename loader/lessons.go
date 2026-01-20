@@ -7,10 +7,7 @@ import (
 	"strings"
 )
 
-type csvRow struct {
-	First  string
-	Second string
-}
+type csvRow []string
 
 func LoadLessons(dataDir string) ([]csvRow, error) {
 	var rows []csvRow
@@ -48,15 +45,8 @@ func LoadLesson(filePath string) ([]csvRow, error) {
 		if line == "" {
 			continue
 		}
-
 		parts := strings.Split(line, ";")
-		if len(parts) > 1 {
-			firstPart := strings.TrimSpace(parts[0])
-			// If there are more than 2 values we just create multiple vocabulary pairs each maping from the first one to each one
-			for _, part := range parts[1:] {
-				rows = append(rows, csvRow{firstPart, strings.TrimSpace(part)})
-			}
-		}
+		rows = append(rows, parts)
 	}
 
 	if err := scanner.Err(); err != nil {

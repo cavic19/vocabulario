@@ -52,3 +52,44 @@ func TestToWords(t *testing.T) {
 
 	assert.ElementsMatch(t, expected, actual)
 }
+
+func TestToWords_MultipleEntries(t *testing.T) {
+	rows := []csvRow{
+		{"A", "B", "C"},
+		{"D", "E", "C"},
+	}
+
+	actual := toWords(rows)
+
+	expected := []core.Word{
+		{
+			Id:   core.WordId{Word: "A", NewLang: true},
+			From: "A",
+			To:   []string{"B", "C"},
+		},
+		{
+			Id:   core.WordId{Word: "D", NewLang: true},
+			From: "D",
+			To:   []string{"E", "C"},
+		},
+
+		{
+			Id:   core.WordId{Word: "B", NewLang: false},
+			From: "B",
+			To:   []string{"A"},
+		},
+		{
+			Id:   core.WordId{Word: "C", NewLang: false},
+			From: "C",
+			To:   []string{"A", "D"},
+		},
+		{
+			Id:   core.WordId{Word: "E", NewLang: false},
+			From: "E",
+			To:   []string{"D"},
+		},
+	}
+
+	assert.ElementsMatch(t, expected, actual)
+
+}
