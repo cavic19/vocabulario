@@ -11,6 +11,9 @@ A vocabulary learning app with spaced repetition. Words you struggle with appear
 - Spaced repetition based on success/failure tracking
 - Statistics saved automatically to `stats.json`
 - Accent-insensitive comparison (optional)
+- Multiple correct answers per word—use separate rows in your CSV for each pairing (e.g., `A;B` and `A;C` to accept B or C as correct answers for A)
 
 ## TODO
 - [ ] Integrate with AI agent to generate contextual sentences for translation using the user's most-struggled words
+
+

@@ -1,4 +1,4 @@
-package main
+package core
 
 type Memory[T comparable] struct {
 	mem    map[T]int
